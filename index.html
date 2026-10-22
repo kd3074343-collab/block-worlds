@@ -103,7 +103,7 @@ input[type=range]{width:100%;touch-action:auto;accent-color:#1f9d63}
   <button class="round" id="invBtn" aria-label="Bag">🎒</button>
   <button class="round" id="menuBtn" aria-label="Menu">☰</button>
   <div id="joyBase"><div id="joyKnob"></div></div>
-  <button class="act" id="bJump">Jump</button><button class="act" id="bDown">Down</button>
+  <button class="act" id="bJump">Jump</button><button class="act" id="bDown" style="display:none">Down</button>
   <button class="act" id="bPlace">Place</button><button class="act" id="bBreak">Break</button>
   <div id="stats"><div id="hp"></div><div id="fd"></div></div>
   <div id="hot"></div>
@@ -115,7 +115,7 @@ input[type=range]{width:100%;touch-action:auto;accent-color:#1f9d63}
     <h1>Block Worlds</h1>
     <div id="mpHomeView" class="mpCard" hidden style="box-sizing:border-box;width:100%;max-width:360px;padding:7px 10px;gap:7px;align-self:center">
       <p id="mpWelcome" class="mpWelcomeLine">Welcome!</p>
-      <button class="mpBtn" id="mpCreateViewBtn">Start</button>
+      <button class="mpBtn" id="mpCreateViewBtn"><span id="mpPlayLabel">Play Online</span></button>
     </div>
     <div id="mpRoomView" class="mpCard" hidden><h2 id="mpRoomTitle" style="margin:0"></h2></div>
     <div id="mpStatus" class="mpStatus" role="status"></div>
@@ -126,9 +126,7 @@ input[type=range]{width:100%;touch-action:auto;accent-color:#1f9d63}
 <div id="menu"><div class="panel">
   <h1>Block Worlds</h1>
   <button class="mb" id="mResume">▶ Resume</button>
-  <button class="mb alt" id="mMode">🎮 Mode: Survival</button>
-  <button class="mb alt" id="mFly">🕊 Flight: Off</button>
-  <button class="mb alt" id="mHome">🏠 Return to Village</button>
+  <button class="mb alt" id="customHudBtn">🎛 Custom HUD</button>
   <button class="mb alt" id="mSave">💾 Save Game</button>
   <button class="mb alt" id="mSet">⚙ Settings</button>
 </div></div>
@@ -1451,7 +1449,7 @@ function renderNametags(vp){
     const pInfo=(mp.room&&mp.room.players)?mp.room.players.find(function(p){return p.id===id}):null;
     const name=pInfo&&pInfo.name?pInfo.name:"Player";
     const safeName=String(name).replace(/[&<>\"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[ch]});
-    h+='<div style="position:absolute;left:'+sx+'px;top:'+sy+'px;transform:translate(-50%,-100%);background:rgba(0,0,0,0.68);color:#fff;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;white-space:nowrap;border:1px solid rgba(255,255,255,0.25);pointer-events:none;text-shadow:0 1px 2px #000">'+safeName+'</div>'; 
+    const dist=Math.max(0,Math.round(Math.hypot(x-P.x,y-2.15-P.y,z-P.z)));h+='<div style="position:absolute;left:'+sx+'px;top:'+sy+'px;transform:translate(-50%,-100%);background:rgba(0,0,0,0.72);color:#fff;padding:3px 8px;border-radius:7px;font-size:12px;font-weight:700;white-space:nowrap;border:1px solid rgba(123,230,173,0.55);pointer-events:none;text-shadow:0 1px 2px #000">'+safeName+' <span style="color:#8ce8b5;font-weight:600">'+dist+'m</span></div>'; 
   }
   cont.innerHTML=h;
 }
@@ -1526,6 +1524,7 @@ function draw(now){
     gl.bindBuffer(gl.ARRAY_BUFFER,lineBuf);gl.vertexAttribPointer(0,3,gl.FLOAT,false,12,0);gl.drawArrays(gl.LINES,0,24);
   }
   $("#wtr").style.opacity=get(Math.floor(e[0]),Math.floor(e[1]),Math.floor(e[2]))===WATER?1:0;
+  renderNametags(vp);
 }
 
 /* ================= ICONS / HUD ================= */
@@ -1695,6 +1694,17 @@ holdBtn("#bDown",()=>input.down=true,()=>input.down=false);
 holdBtn("#bBreak",()=>{input.brk=true},()=>input.brk=false);
 holdBtn("#bPlace",()=>{input.plc=true;plcCd=0;plcEdge=true},()=>input.plc=false);
 
+/* ================= CUSTOM HUD POSITIONING ================= */
+let hudEdit=false,hudDrag=null,hudLabel=null;
+const hudParts=['joyBase','bJump','bPlace','bBreak'];
+function loadHudPositions(){try{const v=JSON.parse(localStorage.getItem('bw_custom_hud_v1')||'{}');for(const id of hudParts){const el=document.getElementById(id),p=v[id];if(!p)continue;el.style.left=(p.x*Math.max(1,innerWidth-el.offsetWidth))+'px';el.style.top=(p.y*Math.max(1,innerHeight-el.offsetHeight))+'px';el.style.right='auto';el.style.bottom='auto';}}catch(e){}}
+function saveHudPositions(){const v={};for(const id of hudParts){const el=document.getElementById(id),r=el.getBoundingClientRect();v[id]={x:Math.max(0,Math.min(1,r.left/Math.max(1,innerWidth-el.offsetWidth))),y:Math.max(0,Math.min(1,r.top/Math.max(1,innerHeight-el.offsetHeight)))};}try{localStorage.setItem('bw_custom_hud_v1',JSON.stringify(v))}catch(e){}}
+function exitHudEdit(){hudEdit=false;document.body.classList.remove('hud-edit');if(hudLabel)hudLabel.remove();hudLabel=null;saveHudPositions();}
+$('#customHudBtn').addEventListener('click',()=>{setPanel(null);hudEdit=true;document.body.classList.add('hud-edit');hudLabel=document.createElement('div');hudLabel.className='hud-edit-label';hudLabel.textContent='Drag controls to move · tap here to finish';hudLabel.style.pointerEvents='auto';hudLabel.onclick=exitHudEdit;document.body.appendChild(hudLabel);tip('Drag Joystick, Jump, Place and Break to position them');});
+for(const id of hudParts){const el=document.getElementById(id);el.addEventListener('pointerdown',e=>{if(!hudEdit)return;e.preventDefault();e.stopImmediatePropagation();const r=el.getBoundingClientRect();hudDrag={el,id,dx:e.clientX-r.left,dy:e.clientY-r.top,pointerId:e.pointerId};el.setPointerCapture?.(e.pointerId);},true);el.addEventListener('pointermove',e=>{if(!hudEdit||!hudDrag||hudDrag.el!==el)return;const x=Math.max(0,Math.min(innerWidth-el.offsetWidth,e.clientX-hudDrag.dx)),y=Math.max(0,Math.min(innerHeight-el.offsetHeight,e.clientY-hudDrag.dy));el.style.left=x+'px';el.style.top=y+'px';el.style.right='auto';el.style.bottom='auto';});const end=()=>{if(hudDrag&&hudDrag.el===el){hudDrag=null;saveHudPositions()}};el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);}
+window.addEventListener('resize',()=>{if(!hudEdit)loadHudPositions()});
+loadHudPositions();
+
 /* ================= PANELS / SETTINGS ================= */
 let panel=null;
 const PANELS=["menu","inv","furn","chest","set","dead"];
@@ -1709,8 +1719,7 @@ function setPanel(p){
   if(p==="set")updateSettings();
 }
 function updateMenu(){
-  $("#mMode").textContent="🎮 Mode: "+(creative?"Creative":"Survival");
-  $("#mFly").textContent="🕊 Udna: "+(P.fly?"chalu":"band");
+  // Removed flight and game-mode menu controls.
 }
 const FESTN={auto:"Auto",utt:"Uttarayan (patang)",diw:"Diwali",off:"Band"};
 function updateSettings(){
@@ -1730,9 +1739,6 @@ $("#furnClose").addEventListener("click",()=>setPanel(null));
 $("#chestClose").addEventListener("click",()=>setPanel(null));
 $("#respawn").addEventListener("click",respawn);
 $("#mSave").addEventListener("click",()=>{save();tip("Save ho gaya")});
-$("#mMode").addEventListener("click",()=>{creative=!creative;hudKey="";updateHud();renderHot();updateMenu()});
-$("#mFly").addEventListener("click",()=>{P.fly=!P.fly;$("#bDown").style.display=P.fly?"grid":"none";updateMenu()});
-$("#mHome").addEventListener("click",()=>{spawn(false);setPanel(null);tip("Gaon ke chowk par")});
 $("#mSet").addEventListener("click",()=>setPanel("set"));
 let newArm=0;
 $("#setClose").addEventListener("click",()=>{savePrefs();setPanel("menu")});
@@ -1750,7 +1756,7 @@ window.addEventListener("pagehide",()=>{if(ready&&!dead)save()});
 const mp={name:'',roomCode:'global',playerId:'',host:false,ws:null,room:null,started:false,applyingRemote:false,lastMove:0,remote:{},ready:false,connecting:false,lastMoveWrite:0,worldReady:false,pendingBlocks:{},ping:0,lastPingAt:0,pingTimer:null};
 const mpViews=['mpHomeView','mpRoomView'];
 function mpView(id){mpViews.forEach(v=>$('#'+v).hidden=v!==id);$('#mpStatus').textContent='';}
-function mpStatus(t){$('#mpStatus').textContent=t||'';}
+function mpStatus(t){const el=$('#mpStatus');if(t==='__connecting__'){el.innerHTML='<span class="mpSpinner" aria-hidden="true"></span>Connecting to online world…';return}el.textContent=t||'';}
 function mpLoadLocal(){
   // Read the saved name independently so a damaged optional setting cannot erase it.
   try{mp.name=(localStorage.getItem('bd_mp_name')||'').trim()}catch(e){mp.name=''}
@@ -1763,7 +1769,7 @@ function mpOpenHome(){
   $('#mpWelcome').innerHTML='';const label=document.createElement('span');label.className='mpWelcomeLabel';label.textContent='Welcome,';const w=document.createElement('span');w.className='mpUserName';w.textContent=mp.name||'Player';const edit=document.createElement('button');edit.className='mpEditName';edit.type='button';edit.title='Change name';edit.setAttribute('aria-label','Change name');edit.textContent='✎';edit.onclick=()=>{const n=window.prompt('Change your name',mp.name||'Player');if(n===null)return;const v=n.trim().slice(0,20);if(!v)return;mp.name=v;try{localStorage.setItem('bd_mp_name',v)}catch(e){}mpOpenHome();if(mp.started)mpSend({type:'player:move',position:{x:P.x,y:P.y,z:P.z,yaw:P.yaw,pitch:P.pitch,moving:false}})};$('#mpWelcome').append(label,w,edit);
 }
 async function mpPlaySolo(){
-  if(mp.connecting)return;mp.connecting=true;mpStatus('Connecting to shared world…');
+  if(mp.connecting)return;mp.connecting=true;mpStatus('__connecting__');$('#mpCreateViewBtn').disabled=true;$('#mpCreateViewBtn').style.opacity='.75';
   try{
     if(mp.ws&&mp.ws.readyState===WebSocket.OPEN){mp.ws.close()}
     const scheme=location.protocol==='https:'?'wss://':'ws://';
@@ -1802,7 +1808,7 @@ async function mpPlaySolo(){
     ws.addEventListener('error',()=>mpStatus('Server connection failed. Start the Termux server and open this page through its URL.'));
     ws.addEventListener('close',()=>{if(mp.ws===ws){mpStatus('Disconnected from server.');$('#mpPing').classList.remove('show')}});
   }catch(e){mpStatus('Could not connect: '+e.message)}
-  finally{mp.connecting=false}
+  finally{mp.connecting=false;$('#mpCreateViewBtn').disabled=false;$('#mpCreateViewBtn').style.opacity='1'}
 }
 function mpApplyZombieSnapshot(list){
   const existing=new Map(mobs.filter(m=>m.type==='zombie').map(m=>[m.syncId,m]));const keep=new Set();
@@ -1812,7 +1818,7 @@ function mpApplyZombieSnapshot(list){
 function mpSend(data){
   if(!mp.ws||mp.ws.readyState!==WebSocket.OPEN||!mp.started)return;
   if(data?.type==='player:move'){
-    const now=Date.now();if(now-(mp.lastMoveWrite||0)<100)return;mp.lastMoveWrite=now;
+    const now=Date.now();if(now-(mp.lastMoveWrite||0)<70)return;mp.lastMoveWrite=now;
     mp.ws.send(JSON.stringify({type:'player:move',position:data.position}));
   }else if(data?.type==='block:set'){
     const b=data.block;if(!b)return;
@@ -1831,9 +1837,9 @@ function mpStartPing(){
   if(mp.pingTimer)clearInterval(mp.pingTimer);
   const el=$('#mpPing');el.classList.add('show');el.textContent='ping: --';
   const measure=()=>{if(!mp.started||!mp.ws||mp.ws.readyState!==WebSocket.OPEN)return;mp.ws.send(JSON.stringify({type:'ping',t:performance.now()}))};
-  measure();mp.pingTimer=setInterval(measure,5000);
+  measure();mp.pingTimer=setInterval(measure,2000);
 }
-function mpRenderPlayersHud(){const h=$('#mpPlayersHud');if(!mp.started){h.style.display='none';return}const vals=Object.entries(mp.remote).filter(([id])=>id!==mp.playerId);h.style.display=vals.length?'block':'none';h.textContent=vals.map(([id,p])=>{const name=(mp.room?.players||[]).find(x=>x.id===id)?.name||'Player';const q=p.position||{};return name+' · '+[q.x,q.y,q.z].map(n=>Number(n||0).toFixed(0)).join(', ')}).join('\n')}
+function mpRenderPlayersHud(){const h=$('#mpPlayersHud');h.style.display='none';/* world-space name tags are rendered above each remote player */}
 function mpDisconnect(){if(mp.pingTimer){clearInterval(mp.pingTimer);mp.pingTimer=null}$('#mpPing').classList.remove('show');if(mp.ws){try{mp.ws.close()}catch{}mp.ws=null}mp.roomCode='';mp.playerId='';mp.host=false;mp.started=false;mpUpdateFullscreenButton();mp.remote={};$('#mpPlayersHud').style.display='none';}
 
 function mpStartSoloLocal(){
