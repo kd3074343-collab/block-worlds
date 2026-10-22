@@ -1,0 +1,13 @@
+{
+  "name": "block-worlds-local-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local WebSocket multiplayer server for Block Worlds",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
