@@ -14,3 +14,6 @@ The server reads Render's `PORT` environment variable and listens on `0.0.0.0`. 
 - The shared seed, connected players, and changed blocks are held in memory and reset when the service restarts.
 - Free instances may sleep when idle; the first visit can be slow.
 - Test gameplay after deployment; packaging and syntax checks do not guarantee full multiplayer behavior.
+
+
+Custom HUD fix: The Custom HUD editor now includes visible “Save HUD” and “Cancel” buttons. Save persists the control positions locally.
