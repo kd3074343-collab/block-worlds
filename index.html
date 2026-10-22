@@ -1757,7 +1757,7 @@ window.addEventListener("pagehide",()=>{if(ready&&!dead)save()});
 const mp={name:'',roomCode:'global',playerId:'',host:false,ws:null,room:null,started:false,applyingRemote:false,lastMove:0,remote:{},ready:false,connecting:false,lastMoveWrite:0,worldReady:false,pendingBlocks:{},ping:0,lastPingAt:0,pingTimer:null};
 const mpViews=['mpHomeView','mpRoomView'];
 function mpView(id){mpViews.forEach(v=>$('#'+v).hidden=v!==id);$('#mpStatus').textContent='';}
-function mpStatus(t){const el=$('#mpStatus');if(t==='__connecting__'){el.innerHTML='<span class="mpSpinner" aria-hidden="true"></span>Connecting to online world…';return}el.textContent=t||'';}
+function mpStatus(t){const el=$('#mpStatus');if(t==='__connecting__'){el.textContent='Connecting to online world…';return}el.textContent=t||'';}
 function mpLoadLocal(){
   // Read the saved name independently so a damaged optional setting cannot erase it.
   try{mp.name=(localStorage.getItem('bd_mp_name')||'').trim()}catch(e){mp.name=''}
